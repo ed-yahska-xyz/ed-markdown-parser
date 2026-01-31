@@ -15,6 +15,14 @@ const Node = union(enum) {
     heading: Heading,
     paragraph: Paragraph,
     text: Text,
+    blockquote: Blockquote,
+    list: List,
+    list_item: ListItem,
+    code: Code,
+    inline_bold: InlineBold,
+    inline_italics: InlineItalics,
+    image: Image,
+    link: Link,
 };
 
 const Document = struct {
@@ -32,6 +40,43 @@ const Paragraph = struct {
 
 const Text = struct {
     value: []const u8,
+};
+
+const Blockquote = struct {
+    children: []const *Node,
+};
+
+const List = struct {
+    marker: u8, // '-', '*', or '+'
+    children: []const *Node, // list items
+};
+
+const ListItem = struct {
+    children: []const *Node,
+};
+
+const Code = struct {
+    value: []const u8,
+};
+
+const InlineBold = struct {
+    children: []const *Node,
+};
+
+const InlineItalics = struct {
+    children: []const *Node,
+};
+
+const Image = struct {
+    alt: []const u8,
+    src: []const u8,
+    title: ?[]const u8,
+};
+
+const Link = struct {
+    children: []const *Node, // link text can contain inline nodes
+    href: []const u8,
+    title: ?[]const u8,
 };
 ```
 
@@ -72,7 +117,15 @@ The parser then reads the beginning of the like and checks if it is one of the f
             - \" start of image title
                 - read the following text as the title of the image until another \" is found.
             - \) end the `Image` node.
-- 
+- \[ Link
+    - This is an inline markdown syntax, which means close the current text node by entering it into parent children array and start a new `Link` node.
+    - Read the text until a \] is found
+    - \] The link text has ended, this should ideally be followed by
+    - \( This starts the `uri` of the link, read the link href until a \) or \" is found.
+        - \" start of link title
+            - read the following text as the title of the link until another \" is found.
+        - \) end the `Link` node.
+    - If \] is not followed by \(, treat the entire sequence as plain text (not a link).
 
 ### Frontend
 
