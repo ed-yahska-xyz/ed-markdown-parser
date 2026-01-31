@@ -7,10 +7,13 @@ pub const Node = union(enum) {
     list: List,
     list_item: ListItem,
     code: Code,
+    code_block: CodeBlock,
     inline_bold: InlineBold,
     inline_italics: InlineItalics,
     image: Image,
     link: Link,
+    horizontal_rule: HorizontalRule,
+    line_break: void,
 };
 
 pub const Document = struct {
@@ -35,6 +38,7 @@ pub const Blockquote = struct {
 };
 
 pub const List = struct {
+    ordered: bool,
     marker: u8,
     children: []const *Node,
 };
@@ -44,6 +48,11 @@ pub const ListItem = struct {
 };
 
 pub const Code = struct {
+    value: []const u8,
+};
+
+pub const CodeBlock = struct {
+    language: ?[]const u8,
     value: []const u8,
 };
 
@@ -66,3 +75,5 @@ pub const Link = struct {
     href: []const u8,
     title: ?[]const u8,
 };
+
+pub const HorizontalRule = struct {};
