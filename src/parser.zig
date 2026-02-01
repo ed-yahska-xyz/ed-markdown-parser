@@ -1007,14 +1007,18 @@ pub fn parseLineBreak(input: []const u8, pos: *usize, allocator: std.mem.Allocat
 // =============================================================================
 
 test "parseDocument - simple paragraph" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "Hello, world!";
     const doc = try parseDocument(input, allocator);
     try std.testing.expect(doc.* == .document);
 }
 
 test "parseDocument - empty input" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "";
     const doc = try parseDocument(input, allocator);
     try std.testing.expect(doc.* == .document);
@@ -1022,7 +1026,9 @@ test "parseDocument - empty input" {
 }
 
 test "parseDocument - multiple blocks" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "# Heading\n\nParagraph text.\n\n- list item";
     const doc = try parseDocument(input, allocator);
     try std.testing.expect(doc.* == .document);
@@ -1030,7 +1036,9 @@ test "parseDocument - multiple blocks" {
 }
 
 test "parseHeading - level 1" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "# Hello";
     var pos: usize = 0;
     const node = try parseHeading(input, &pos, allocator);
@@ -1039,7 +1047,9 @@ test "parseHeading - level 1" {
 }
 
 test "parseHeading - level 3" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "### Third level heading";
     var pos: usize = 0;
     const node = try parseHeading(input, &pos, allocator);
@@ -1048,7 +1058,9 @@ test "parseHeading - level 3" {
 }
 
 test "parseHeading - level 6 max" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "###### Smallest heading";
     var pos: usize = 0;
     const node = try parseHeading(input, &pos, allocator);
@@ -1057,7 +1069,9 @@ test "parseHeading - level 6 max" {
 }
 
 test "parseHeading - level 7 invalid" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "####### Too many";
     var pos: usize = 0;
     const result = parseHeading(input, &pos, allocator);
@@ -1065,7 +1079,9 @@ test "parseHeading - level 7 invalid" {
 }
 
 test "parseHeading - no space after hash" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "#NoSpace";
     var pos: usize = 0;
     const result = parseHeading(input, &pos, allocator);
@@ -1073,7 +1089,9 @@ test "parseHeading - no space after hash" {
 }
 
 test "parseHeading - with inline bold" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "# Hello **world**";
     var pos: usize = 0;
     const node = try parseHeading(input, &pos, allocator);
@@ -1082,7 +1100,9 @@ test "parseHeading - with inline bold" {
 }
 
 test "parseParagraph - simple text" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "This is a paragraph.";
     var pos: usize = 0;
     const node = try parseParagraph(input, &pos, allocator);
@@ -1090,7 +1110,9 @@ test "parseParagraph - simple text" {
 }
 
 test "parseParagraph - multi-line" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "First line\nSecond line\n\nNext paragraph";
     var pos: usize = 0;
     const node = try parseParagraph(input, &pos, allocator);
@@ -1100,7 +1122,9 @@ test "parseParagraph - multi-line" {
 }
 
 test "parseParagraph - with inline formatting" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "Text with **bold** and *italic*.";
     var pos: usize = 0;
     const node = try parseParagraph(input, &pos, allocator);
@@ -1109,7 +1133,9 @@ test "parseParagraph - with inline formatting" {
 }
 
 test "parseText - plain text" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "plain text here";
     var pos: usize = 0;
     const node = try parseText(input, &pos, allocator);
@@ -1118,7 +1144,9 @@ test "parseText - plain text" {
 }
 
 test "parseText - stops at inline syntax" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "text before *italic*";
     var pos: usize = 0;
     const node = try parseText(input, &pos, allocator);
@@ -1127,7 +1155,9 @@ test "parseText - stops at inline syntax" {
 }
 
 test "parseText - escaped asterisk" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "not \\*italic\\*";
     var pos: usize = 0;
     const node = try parseText(input, &pos, allocator);
@@ -1136,7 +1166,9 @@ test "parseText - escaped asterisk" {
 }
 
 test "parseText - stops at link bracket" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "click [here](url)";
     var pos: usize = 0;
     const node = try parseText(input, &pos, allocator);
@@ -1145,7 +1177,9 @@ test "parseText - stops at link bracket" {
 }
 
 test "parseText - stops at image exclamation" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "see ![alt](img)";
     var pos: usize = 0;
     const node = try parseText(input, &pos, allocator);
@@ -1154,7 +1188,9 @@ test "parseText - stops at image exclamation" {
 }
 
 test "parseText - stops at backtick" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "run `code`";
     var pos: usize = 0;
     const node = try parseText(input, &pos, allocator);
@@ -1163,7 +1199,9 @@ test "parseText - stops at backtick" {
 }
 
 test "parseBlockquote - simple" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "> This is a quote";
     var pos: usize = 0;
     const node = try parseBlockquote(input, &pos, allocator);
@@ -1171,7 +1209,9 @@ test "parseBlockquote - simple" {
 }
 
 test "parseBlockquote - multi-line" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "> Line one\n> Line two\n> Line three";
     var pos: usize = 0;
     const node = try parseBlockquote(input, &pos, allocator);
@@ -1179,7 +1219,9 @@ test "parseBlockquote - multi-line" {
 }
 
 test "parseBlockquote - nested" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "> Outer\n>> Nested";
     var pos: usize = 0;
     const node = try parseBlockquote(input, &pos, allocator);
@@ -1188,7 +1230,9 @@ test "parseBlockquote - nested" {
 }
 
 test "parseList - unordered with dash" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "- item 1\n- item 2";
     var pos: usize = 0;
     const node = try parseList(input, &pos, allocator);
@@ -1198,7 +1242,9 @@ test "parseList - unordered with dash" {
 }
 
 test "parseList - ordered" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "1. first\n2. second";
     var pos: usize = 0;
     const node = try parseList(input, &pos, allocator);
@@ -1207,7 +1253,9 @@ test "parseList - ordered" {
 }
 
 test "parseList - unordered with asterisk" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "* item one\n* item two";
     var pos: usize = 0;
     const node = try parseList(input, &pos, allocator);
@@ -1217,7 +1265,9 @@ test "parseList - unordered with asterisk" {
 }
 
 test "parseList - unordered with plus" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "+ item one\n+ item two";
     var pos: usize = 0;
     const node = try parseList(input, &pos, allocator);
@@ -1227,7 +1277,9 @@ test "parseList - unordered with plus" {
 }
 
 test "parseList - nested" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "- item 1\n    - nested item\n- item 2";
     var pos: usize = 0;
     const node = try parseList(input, &pos, allocator);
@@ -1235,7 +1287,9 @@ test "parseList - nested" {
 }
 
 test "parseList - single item" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "- only one";
     var pos: usize = 0;
     const node = try parseList(input, &pos, allocator);
@@ -1244,7 +1298,9 @@ test "parseList - single item" {
 }
 
 test "parseListItem - simple item" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "item content";
     var pos: usize = 0;
     const node = try parseListItem(input, &pos, allocator);
@@ -1252,7 +1308,9 @@ test "parseListItem - simple item" {
 }
 
 test "parseCode - single backtick" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "`code here`";
     var pos: usize = 0;
     const node = try parseCode(input, &pos, allocator);
@@ -1261,7 +1319,9 @@ test "parseCode - single backtick" {
 }
 
 test "parseCode - double backtick" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "``code with ` inside``";
     var pos: usize = 0;
     const node = try parseCode(input, &pos, allocator);
@@ -1270,7 +1330,9 @@ test "parseCode - double backtick" {
 }
 
 test "parseCode - empty" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "``";
     var pos: usize = 0;
     const node = try parseCode(input, &pos, allocator);
@@ -1279,7 +1341,9 @@ test "parseCode - empty" {
 }
 
 test "parseCode - unclosed backtick" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "`unclosed";
     var pos: usize = 0;
     const result = parseCode(input, &pos, allocator);
@@ -1287,7 +1351,9 @@ test "parseCode - unclosed backtick" {
 }
 
 test "parseInlineBold - simple" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "**bold text**";
     var pos: usize = 0;
     const node = try parseInlineBold(input, &pos, allocator);
@@ -1295,7 +1361,9 @@ test "parseInlineBold - simple" {
 }
 
 test "parseInlineBold - nested italic" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "**bold and *italic* text**";
     var pos: usize = 0;
     const node = try parseInlineBold(input, &pos, allocator);
@@ -1304,7 +1372,9 @@ test "parseInlineBold - nested italic" {
 }
 
 test "parseInlineBold - unclosed" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "**unclosed bold";
     var pos: usize = 0;
     const result = parseInlineBold(input, &pos, allocator);
@@ -1312,7 +1382,9 @@ test "parseInlineBold - unclosed" {
 }
 
 test "parseInlineBold - empty" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "****";
     var pos: usize = 0;
     const node = try parseInlineBold(input, &pos, allocator);
@@ -1321,7 +1393,9 @@ test "parseInlineBold - empty" {
 }
 
 test "parseInlineItalics - simple" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "*italic text*";
     var pos: usize = 0;
     const node = try parseInlineItalics(input, &pos, allocator);
@@ -1329,7 +1403,9 @@ test "parseInlineItalics - simple" {
 }
 
 test "parseInlineItalics - unclosed" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "*unclosed italic";
     var pos: usize = 0;
     const result = parseInlineItalics(input, &pos, allocator);
@@ -1337,7 +1413,9 @@ test "parseInlineItalics - unclosed" {
 }
 
 test "parseInlineItalics - not bold" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "*single asterisk*";
     var pos: usize = 0;
     const node = try parseInlineItalics(input, &pos, allocator);
@@ -1347,7 +1425,9 @@ test "parseInlineItalics - not bold" {
 }
 
 test "parseImage - with alt and src" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "![alt text](image.png)";
     var pos: usize = 0;
     const node = try parseImage(input, &pos, allocator);
@@ -1357,7 +1437,9 @@ test "parseImage - with alt and src" {
 }
 
 test "parseImage - with title" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "![alt](img.jpg \"Image Title\")";
     var pos: usize = 0;
     const node = try parseImage(input, &pos, allocator);
@@ -1366,7 +1448,9 @@ test "parseImage - with title" {
 }
 
 test "parseImage - no title is null" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "![alt](image.png)";
     var pos: usize = 0;
     const node = try parseImage(input, &pos, allocator);
@@ -1375,7 +1459,9 @@ test "parseImage - no title is null" {
 }
 
 test "parseImage - empty alt" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "![](image.png)";
     var pos: usize = 0;
     const node = try parseImage(input, &pos, allocator);
@@ -1384,7 +1470,9 @@ test "parseImage - empty alt" {
 }
 
 test "parseImage - malformed missing paren" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "![alt]no paren";
     var pos: usize = 0;
     const result = parseImage(input, &pos, allocator);
@@ -1392,7 +1480,9 @@ test "parseImage - malformed missing paren" {
 }
 
 test "parseLink - simple" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "[click here](https://example.com)";
     var pos: usize = 0;
     const node = try parseLink(input, &pos, allocator);
@@ -1401,7 +1491,9 @@ test "parseLink - simple" {
 }
 
 test "parseLink - with title" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "[link](url.com \"Link Title\")";
     var pos: usize = 0;
     const node = try parseLink(input, &pos, allocator);
@@ -1410,7 +1502,9 @@ test "parseLink - with title" {
 }
 
 test "parseLink - no title is null" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "[text](url.com)";
     var pos: usize = 0;
     const node = try parseLink(input, &pos, allocator);
@@ -1419,7 +1513,9 @@ test "parseLink - no title is null" {
 }
 
 test "parseLink - malformed no paren after bracket" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "[text] not a link";
     var pos: usize = 0;
     const result = parseLink(input, &pos, allocator);
@@ -1428,7 +1524,9 @@ test "parseLink - malformed no paren after bracket" {
 }
 
 test "parseLink - with inline formatting in text" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "[**bold** link](url.com)";
     var pos: usize = 0;
     const node = try parseLink(input, &pos, allocator);
@@ -1437,7 +1535,9 @@ test "parseLink - with inline formatting in text" {
 }
 
 test "parseLink - empty text" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "[](url.com)";
     var pos: usize = 0;
     const node = try parseLink(input, &pos, allocator);
@@ -1446,7 +1546,9 @@ test "parseLink - empty text" {
 }
 
 test "parseCodeBlock - with language" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "```zig\nconst x = 1;\n```";
     var pos: usize = 0;
     const node = try parseCodeBlock(input, &pos, allocator);
@@ -1456,7 +1558,9 @@ test "parseCodeBlock - with language" {
 }
 
 test "parseCodeBlock - without language" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "```\nsome code\n```";
     var pos: usize = 0;
     const node = try parseCodeBlock(input, &pos, allocator);
@@ -1465,7 +1569,9 @@ test "parseCodeBlock - without language" {
 }
 
 test "parseCodeBlock - tilde fence" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "~~~python\nprint('hello')\n~~~";
     var pos: usize = 0;
     const node = try parseCodeBlock(input, &pos, allocator);
@@ -1474,7 +1580,9 @@ test "parseCodeBlock - tilde fence" {
 }
 
 test "parseCodeBlock - unclosed" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "```\nunclosed code block";
     var pos: usize = 0;
     const result = parseCodeBlock(input, &pos, allocator);
@@ -1482,7 +1590,9 @@ test "parseCodeBlock - unclosed" {
 }
 
 test "parseCodeBlock - empty" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "```\n```";
     var pos: usize = 0;
     const node = try parseCodeBlock(input, &pos, allocator);
@@ -1491,7 +1601,9 @@ test "parseCodeBlock - empty" {
 }
 
 test "parseHorizontalRule - dashes" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "---";
     var pos: usize = 0;
     const node = try parseHorizontalRule(input, &pos, allocator);
@@ -1499,7 +1611,9 @@ test "parseHorizontalRule - dashes" {
 }
 
 test "parseHorizontalRule - asterisks" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "***";
     var pos: usize = 0;
     const node = try parseHorizontalRule(input, &pos, allocator);
@@ -1507,7 +1621,9 @@ test "parseHorizontalRule - asterisks" {
 }
 
 test "parseHorizontalRule - underscores" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "___";
     var pos: usize = 0;
     const node = try parseHorizontalRule(input, &pos, allocator);
@@ -1515,7 +1631,9 @@ test "parseHorizontalRule - underscores" {
 }
 
 test "parseHorizontalRule - with spaces" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "- - -";
     var pos: usize = 0;
     const node = try parseHorizontalRule(input, &pos, allocator);
@@ -1523,7 +1641,9 @@ test "parseHorizontalRule - with spaces" {
 }
 
 test "parseHorizontalRule - more than three" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "----------";
     var pos: usize = 0;
     const node = try parseHorizontalRule(input, &pos, allocator);
@@ -1531,7 +1651,9 @@ test "parseHorizontalRule - more than three" {
 }
 
 test "parseHorizontalRule - too few" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "--";
     var pos: usize = 0;
     const result = parseHorizontalRule(input, &pos, allocator);
@@ -1539,7 +1661,9 @@ test "parseHorizontalRule - too few" {
 }
 
 test "parseLineBreak - trailing spaces" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "text  \n";
     var pos: usize = 4; // position at the two spaces
     const node = try parseLineBreak(input, &pos, allocator);
@@ -1547,7 +1671,9 @@ test "parseLineBreak - trailing spaces" {
 }
 
 test "parseLineBreak - backslash" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "text\\\n";
     var pos: usize = 4; // position at backslash
     const node = try parseLineBreak(input, &pos, allocator);
@@ -1555,7 +1681,9 @@ test "parseLineBreak - backslash" {
 }
 
 test "parseLineBreak - single space not a break" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "text \nnext";
     var pos: usize = 4; // position at single space
     const result = parseLineBreak(input, &pos, allocator);
@@ -1563,7 +1691,9 @@ test "parseLineBreak - single space not a break" {
 }
 
 test "parseLineBreak - three spaces" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     const input = "text   \n";
     var pos: usize = 4; // position at spaces
     const node = try parseLineBreak(input, &pos, allocator);
