@@ -211,3 +211,228 @@ pub fn renderToString(node: *const Node, allocator: std.mem.Allocator) RenderErr
 - Text content escapes `<`, `>`, `&` to prevent XSS
 - Attribute values additionally escape `"` (quotes)
 - All user-provided content (text, alt, src, href, title) is escaped
+
+---
+
+## Worker Mode Implementation
+
+The project supports three operating modes. Worker mode is designed for long-running processes (e.g., web server integration).
+
+### Current Modes
+
+| Mode | Command | Description |
+|------|---------|-------------|
+| File | `./md2html input.md output.html` | Convert file to file |
+| Stdio | `./md2html --stdio` or `./md2html -` | Read stdin, write stdout, exit |
+| Worker | `./md2html --worker` | Long-running framed protocol |
+
+### Core Transformation Function
+
+The `markdownToHtml()` function in `main.zig` is the reusable core used by all modes:
+
+```zig
+fn markdownToHtml(markdown: []const u8, arena: *std.heap.ArenaAllocator) ![]u8 {
+    const allocator = arena.allocator();
+    const ast = try parser.parseDocument(markdown, allocator);
+    return try html.renderToString(ast, allocator);
+}
+```
+
+### Framing Protocol (Worker Mode)
+
+Worker mode uses a length-prefixed framing protocol for reliable message boundaries.
+
+#### Request Frame (Client → Worker)
+```
+<LEN>\n
+<LEN bytes of markdown>
+```
+
+#### Response Frame (Worker → Client)
+```
+<LEN>\n
+<LEN bytes of html>
+```
+
+#### Protocol Rules
+- `LEN` is ASCII decimal (e.g., `12345`)
+- Newline delimiter is `\n` (byte 10)
+- Payload is raw bytes (can contain newlines, tabs, anything)
+- Single worker processes one request at a time, sequentially
+- **stdout must contain only framed responses** (no logs)
+- **stderr is for logs/errors**
+
+### Worker Implementation (`runWorker`)
+
+```zig
+fn runWorker(allocator: std.mem.Allocator) !void {
+    const stdin = std.io.getStdIn().reader();
+    const stdout = std.io.getStdOut().writer();
+    var buf_reader = std.io.bufferedReader(stdin);
+    var buf_writer = std.io.bufferedWriter(stdout);
+
+    while (true) {
+        // 1. Read length line: "LEN\n"
+        const len_line = buf_reader.reader().readUntilDelimiterAlloc(
+            allocator, '\n', MAX_HEADER_LEN
+        ) catch |err| switch (err) {
+            error.EndOfStream => return,  // Clean exit on EOF
+            else => return err,
+        };
+        defer allocator.free(len_line);
+
+        const len = try std.fmt.parseInt(usize, len_line, 10);
+        if (len > MAX_INPUT_SIZE) return error.InputTooLarge;
+
+        // 2. Read exactly LEN bytes of markdown
+        const md = try allocator.alloc(u8, len);
+        defer allocator.free(md);
+        try buf_reader.reader().readNoEof(md);
+
+        // 3. Convert markdown to HTML (per-request arena)
+        var arena = std.heap.ArenaAllocator.init(allocator);
+        defer arena.deinit();
+        const html = try markdownToHtml(md, &arena);
+
+        // 4. Write response frame: "LEN\n" + html
+        try buf_writer.writer().print("{d}\n", .{html.len});
+        try buf_writer.writer().writeAll(html);
+        try buf_writer.flush();
+    }
+}
+```
+
+### Guardrails
+
+| Limit | Value | Purpose |
+|-------|-------|---------|
+| `MAX_INPUT_SIZE` | 10 MB | Prevent memory exhaustion |
+| `MAX_HEADER_LEN` | 32 bytes | Prevent header line attacks |
+
+### Error Policy
+
+**Policy B: Crash-and-respawn** (recommended for simplicity)
+- On parse/render error: print to stderr, exit non-zero
+- Caller (e.g., web server) detects failure and respawns the worker
+- Can upgrade to Policy A (keep-alive with error responses) later if needed
+
+### CLI Argument Handling
+
+```zig
+pub fn main() !void {
+    // ... allocator setup ...
+
+    const args = try std.process.argsAlloc(allocator);
+    defer std.process.argsFree(allocator, args);
+
+    if (args.len < 2) {
+        // Print usage
+        return;
+    }
+
+    if (std.mem.eql(u8, args[1], "--worker")) {
+        return runWorker(allocator);
+    } else if (std.mem.eql(u8, args[1], "--stdio") or std.mem.eql(u8, args[1], "-")) {
+        return convertStdio(allocator);
+    } else if (args.len >= 3) {
+        return convertFile(args[1], args[2], allocator);
+    }
+}
+```
+
+### Building for Production
+
+#### Quick Build (only for documentation, prefer build.zig)
+```bash
+zig build-exe -O ReleaseFast -fstrip main.zig -o md2html
+```
+
+#### With build.zig (Recommended)
+
+```zig
+const std = @import("std");
+
+pub fn build(b: *std.Build) void {
+    const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
+
+    const exe = b.addExecutable(.{
+        .name = "md2html",
+        .root_source_file = b.path("main.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    b.installArtifact(exe);
+
+    const run_cmd = b.addRunArtifact(exe);
+    run_cmd.step.dependOn(b.getInstallStep());
+    if (b.args) |args| run_cmd.addArgs(args);
+
+    const run_step = b.step("run", "Run the markdown parser");
+    run_step.dependOn(&run_cmd.step);
+
+    const test_step = b.step("test", "Run unit tests");
+    const unit_tests = b.addTest(.{
+        .root_source_file = b.path("main.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    test_step.dependOn(&b.addRunArtifact(unit_tests).step);
+}
+```
+
+Build commands:
+```bash
+zig build                        # Debug build
+zig build -Doptimize=ReleaseFast # Production build
+zig build run -- --worker        # Run worker mode
+zig build test                   # Run tests
+```
+
+### Manual Testing
+
+Before integrating with a web server, test the worker manually:
+
+```bash
+# Start worker
+./md2html --worker
+
+# In another terminal, send test requests (Node.js example):
+node -e "
+const { spawn } = require('child_process');
+const worker = spawn('./md2html', ['--worker']);
+
+function send(md) {
+    worker.stdin.write(md.length + '\n' + md);
+}
+
+let buffer = '';
+worker.stdout.on('data', (data) => {
+    buffer += data.toString();
+    // Parse framed response...
+    console.log('Response:', buffer);
+});
+
+send('# Hello World');
+send('**Bold** and *italic*');
+"
+```
+
+### Memory Management
+
+Each request uses a fresh arena allocator:
+- Arena created at start of request
+- All AST nodes and strings allocated via arena
+- Single `arena.deinit()` cleans up everything
+- Prevents heap fragmentation over many requests
+
+### Implementation Checklist
+
+- [x] `markdownToHtml()` extracted and reusable (already done)
+- [x] Add `--worker` CLI flag detection
+- [x] Implement `runWorker()` with framing loop
+- [x] Ensure stdout contains only framed responses
+- [x] Use stderr for all logs/errors
+- [x] Create `build.zig` for production builds
+- [x] Manual testing: verify 10+ sequential requests work
