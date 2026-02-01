@@ -1,6 +1,7 @@
 const std = @import("std");
 const parser = @import("src/parser.zig");
 const html = @import("src/fe-html.zig");
+const helper = @import("src/helper.zig");
 
 /// Helper function to convert markdown to HTML using an arena allocator
 /// The arena handles cleanup of all AST nodes automatically
@@ -405,5 +406,28 @@ test "markdown to html - complex document" {
 }
 
 pub fn main() !void {
-    std.debug.print("Run `zig test main.zig` to execute the integration tests.\n", .{});
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+
+    var arena = std.heap.ArenaAllocator.init(allocator);
+    defer arena.deinit();
+    const arena_allocator = arena.allocator();
+
+    const input_path = "examples/input/zig-arrays-and-slices.md";
+    const output_dir = "examples/output";
+
+    // Read the markdown file
+    const markdown_content = try helper.readMarkdownFile(input_path, arena_allocator);
+
+    // Convert markdown to HTML
+    const html_output = try markdownToHtml(markdown_content, &arena);
+
+    // Generate output path
+    const output_path = try helper.mdPathToHtmlPath(input_path, output_dir, arena_allocator);
+
+    // Write HTML to output file
+    try helper.writeHtmlFile(output_path, html_output);
+
+    std.debug.print("Converted {s} -> {s}\n", .{ input_path, output_path });
 }

@@ -1,0 +1,31 @@
+<h1>Zig Arrays and Slices Guide</h1><p>This guide summarizes key concepts, syntax, and examples related to handling arrays in Zig, including slices, passing arrays between functions, pointers, 2D arrays, and common use cases.</p><hr><h2>1. Fixed-Size Arrays</h2><pre><code class="language-zig">const a: [4]i32 = .{1, 2, 3, 4};
+</code></pre><ul><li><p><code>[4]i32</code> is a value-type array with 4 elements.</p></li><li><p>Assigning it copies the entire array.</p></li></ul><hr><h2>2. Slices</h2><pre><code class="language-zig">const slice: []const i32 = a[0..];
+</code></pre><ul><li><p>A slice is a view into an array.</p></li><li><p>Slices carry a pointer and length.</p></li><li><p>Can be passed efficiently to functions.</p></li></ul><p>Subslices:</p><pre><code class="language-zig">a[1..3]; // elements 1 and 2
+</code></pre><hr><h2>3. Passing Arrays and Slices to Functions</h2><p>Fixed-Size Arrays:</p><pre><code class="language-zig">fn printArray(arr: [4]i32) void { ... } // Copies all elements
+</code></pre><p>Slices (Preferred):</p><pre><code class="language-zig">fn printSlice(slice: []const i32) void { ... }
+</code></pre><hr><h2>4. Pointers to Arrays</h2><pre><code class="language-zig">const ptr: *[4]i32 = &amp;a;
+</code></pre><p>Used to avoid copying arrays:</p><pre><code class="language-zig">fn mutate(ptr: *[4]i32) void {
+    ptr.*[0] = 42;
+}
+</code></pre><hr><h2>5. Raw C-style Pointers</h2><pre><code class="language-zig">const p: [*]const u8 = "hello";
+</code></pre><ul><li><p>No length info, no bounds checking.</p></li><li><p>Useful for C interop.</p></li></ul><hr><h2>6. Convert Between Array Types</h2><pre><code class="language-zig">const a: [4]i32 = .{1, 2, 3, 4};
+const slice = a[0..];         // []const i32
+const ptr = &amp;a;               // *[4]i32
+const raw_ptr = &amp;a[0];        // [*]i32
+</code></pre><hr><h2>7. Arena-Allocated Arrays</h2><p>Fixed-Size 2D Array in Arena:</p><pre><code class="language-zig">const matrix = try allocator.create([4][3]f32);
+matrix.* = .{ ... }; // set values
+</code></pre><p>Dynamic Outer, Fixed Inner:</p><pre><code class="language-zig">var rows = std.ArrayList([3]f32).init(arena);
+try rows.append(.{1.0, 2.0, 3.0});
+</code></pre><hr><h2>8. Special Syntax</h2><p>Convert string literals to slices:</p><pre><code class="language-zig">const s: []u8 = "hello"[0..];
+</code></pre><p>Create and reference array with inferred length:</p><pre><code class="language-zig">const parts = &amp;[_][]const u8{ "hello", " ", "zig" };
+</code></pre><hr><h2>9. Common Use Cases</h2><p>Printing a 2D Matrix</p><pre><code class="language-zig">for (matrix.*) |row| {
+    for (row) |val| {
+        std.debug.print("{} ", .{val});
+    }
+    std.debug.print("\n", .{});
+}
+</code></pre><p>Initializing a String Table</p><pre><code class="language-zig">const messages = &amp;[_][]const u8{ "start", "stop", "pause" };
+</code></pre><p>Passing Read-Only Data</p><pre><code class="language-zig">fn printAll(msgs: []const []const u8) void {
+    for (msgs) |m| std.debug.print("{s}\n", .{m});
+}
+</code></pre><hr><h2>Key Takeaways</h2><ul><li><p>Use <code>[N]T</code> when the array size is known and fixed.</p></li><li><p>Use <code>[]T</code> for flexible, bounds-checked views.</p></li><li><p>Use <code>[*]T</code> only for raw access or C interop.</p></li><li><p>Prefer slices in function arguments.</p></li><li><p>Use ArrayList for dynamic-length containers.</p></li><li><p>Arena allocators are ideal for temporary or structured allocations.</p></li></ul>
