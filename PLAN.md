@@ -1,9 +1,10 @@
 ## Markdown to HTML
 
-### Backend
-
 I am planning to create a Markdown to Html program in Zig.
 The project is conceptualized in 2 stages, Frontend and Backend, as most code translation/compilation like projects are.
+
+### Backend
+
 The parser.zig will take in string contents of a markdown file and create an AST. The module in fe-html.zig will take the AST as input and output html string.
 
 This program will use a tagged union to represent blocks of markdown.
@@ -162,118 +163,51 @@ The parser then reads the beginning of the like and checks if it is one of the f
 
 ### Frontend
 
-Once we have an AST convert it to html with a render function like:
-```
-fn renderHtml(node: *const Node, writer: anytype) !void {
-    switch (node.*) {
-        .document => |doc| {
-            for (doc.children) |child| {
-                try renderHtml(child, writer);
-            }
-        },
-        .heading => |h| {
-            try writer.print("<h{}>", .{h.level});
-            for (h.children) |child| {
-                try renderHtml(child, writer);
-            }
-            try writer.print("</h{}>", .{h.level});
-        },
-        .paragraph => |p| {
-            try writer.writeAll("<p>");
-            for (p.children) |child| {
-                try renderHtml(child, writer);
-            }
-            try writer.writeAll("</p>");
-        },
-        .text => |t| {
-            try writeEscaped(writer, t.value);
-        },
-        .blockquote => |bq| {
-            try writer.writeAll("<blockquote>");
-            for (bq.children) |child| {
-                try renderHtml(child, writer);
-            }
-            try writer.writeAll("</blockquote>");
-        },
-        .list => |l| {
-            const tag = if (l.ordered) "ol" else "ul";
-            try writer.print("<{s}>", .{tag});
-            for (l.children) |child| {
-                try renderHtml(child, writer);
-            }
-            try writer.print("</{s}>", .{tag});
-        },
-        .list_item => |li| {
-            try writer.writeAll("<li>");
-            for (li.children) |child| {
-                try renderHtml(child, writer);
-            }
-            try writer.writeAll("</li>");
-        },
-        .code => |c| {
-            try writer.writeAll("<code>");
-            try writeEscaped(writer, c.value);
-            try writer.writeAll("</code>");
-        },
-        .code_block => |cb| {
-            if (cb.language) |lang| {
-                try writer.print("<pre><code class=\"language-{s}\">", .{lang});
-            } else {
-                try writer.writeAll("<pre><code>");
-            }
-            try writeEscaped(writer, cb.value);
-            try writer.writeAll("</code></pre>");
-        },
-        .inline_bold => |b| {
-            try writer.writeAll("<strong>");
-            for (b.children) |child| {
-                try renderHtml(child, writer);
-            }
-            try writer.writeAll("</strong>");
-        },
-        .inline_italics => |i| {
-            try writer.writeAll("<em>");
-            for (i.children) |child| {
-                try renderHtml(child, writer);
-            }
-            try writer.writeAll("</em>");
-        },
-        .image => |img| {
-            try writer.print("<img src=\"{s}\" alt=\"{s}\"", .{img.src, img.alt});
-            if (img.title) |title| {
-                try writer.print(" title=\"{s}\"", .{title});
-            }
-            try writer.writeAll(">");
-        },
-        .link => |lnk| {
-            try writer.print("<a href=\"{s}\"", .{lnk.href});
-            if (lnk.title) |title| {
-                try writer.print(" title=\"{s}\"", .{title});
-            }
-            try writer.writeAll(">");
-            for (lnk.children) |child| {
-                try renderHtml(child, writer);
-            }
-            try writer.writeAll("</a>");
-        },
-        .horizontal_rule => {
-            try writer.writeAll("<hr>");
-        },
-        .line_break => {
-            try writer.writeAll("<br>");
-        },
-    }
-}
+The frontend (`fe-html.zig`) converts the AST to HTML. The implementation uses a modular design with separate render functions for each node type.
 
-fn writeEscaped(writer: anytype, text: []const u8) !void {
-    for (text) |c| {
-        switch (c) {
-            '<' => try writer.writeAll("&lt;"),
-            '>' => try writer.writeAll("&gt;"),
-            '&' => try writer.writeAll("&amp;"),
-            '"' => try writer.writeAll("&quot;"),
-            else => try writer.writeByte(c),
-        }
-    }
-}
+#### Main Entry Point
+
+```zig
+pub fn renderHtml(node: *const Node, writer: anytype) RenderError!void
 ```
+
+Dispatches to specialized render functions based on node type.
+
+#### Render Functions
+
+Each node type has its own render function:
+
+- `renderDocument(doc, writer)` - Renders document children sequentially
+- `renderHeading(h, writer)` - Outputs `<h1>`-`<h6>` based on level
+- `renderParagraph(p, writer)` - Wraps content in `<p>` tags
+- `renderText(t, writer)` - Outputs escaped text content
+- `renderBlockquote(bq, writer)` - Wraps in `<blockquote>` tags
+- `renderList(l, writer)` - Outputs `<ul>` or `<ol>` based on `ordered` field
+- `renderListItem(li, writer)` - Wraps content in `<li>` tags
+- `renderCode(c, writer)` - Wraps escaped code in `<code>` tags
+- `renderCodeBlock(cb, writer)` - Outputs `<pre><code>` with optional language class
+- `renderInlineBold(b, writer)` - Wraps content in `<strong>` tags
+- `renderInlineItalics(i, writer)` - Wraps content in `<em>` tags
+- `renderImage(img, writer)` - Outputs `<img>` with escaped src, alt, and optional title
+- `renderLink(lnk, writer)` - Outputs `<a>` with escaped href and optional title
+- `renderHorizontalRule(writer)` - Outputs `<hr>`
+- `renderLineBreak(writer)` - Outputs `<br>`
+
+#### Helper Functions
+
+```zig
+/// Escapes HTML special characters in text content: < > &
+pub fn writeEscaped(writer: anytype, text: []const u8) RenderError!void
+
+/// Escapes HTML special characters in attributes: < > & "
+pub fn writeEscapedAttribute(writer: anytype, text: []const u8) RenderError!void
+
+/// Convenience function to render a node to an allocated string
+pub fn renderToString(node: *const Node, allocator: std.mem.Allocator) RenderError![]u8
+```
+
+#### Security Notes
+
+- Text content escapes `<`, `>`, `&` to prevent XSS
+- Attribute values additionally escape `"` (quotes)
+- All user-provided content (text, alt, src, href, title) is escaped
