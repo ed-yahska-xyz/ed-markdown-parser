@@ -405,17 +405,11 @@ test "markdown to html - complex document" {
     try std.testing.expect(std.mem.indexOf(u8, result, "<a href=\"https://example.com\">") != null);
 }
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
-
+/// Converts a markdown file to an HTML file
+fn convertFile(input_path: []const u8, output_path: []const u8, allocator: std.mem.Allocator) !void {
     var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();
     const arena_allocator = arena.allocator();
-
-    const input_path = "examples/input/zig-arrays-and-slices.md";
-    const output_dir = "examples/output";
 
     // Read the markdown file
     const markdown_content = try helper.readMarkdownFile(input_path, arena_allocator);
@@ -423,11 +417,67 @@ pub fn main() !void {
     // Convert markdown to HTML
     const html_output = try markdownToHtml(markdown_content, &arena);
 
-    // Generate output path
-    const output_path = try helper.mdPathToHtmlPath(input_path, output_dir, arena_allocator);
-
     // Write HTML to output file
     try helper.writeHtmlFile(output_path, html_output);
 
     std.debug.print("Converted {s} -> {s}\n", .{ input_path, output_path });
+}
+
+/// Converts markdown from stdin to HTML on stdout
+fn convertStdio(allocator: std.mem.Allocator) !void {
+    var arena = std.heap.ArenaAllocator.init(allocator);
+    defer arena.deinit();
+    const arena_allocator = arena.allocator();
+
+    // Read all input from stdin
+    const stdin = std.io.getStdIn();
+    const markdown_content = try stdin.readToEndAlloc(arena_allocator, std.math.maxInt(usize));
+
+    // Convert markdown to HTML
+    const html_output = try markdownToHtml(markdown_content, &arena);
+
+    // Write HTML to stdout
+    const stdout = std.io.getStdOut();
+    try stdout.writeAll(html_output);
+}
+
+fn printUsage() void {
+    std.debug.print("Usage: md2html <input.md> <output.html>\n", .{});
+    std.debug.print("       md2html --stdio\n", .{});
+    std.debug.print("\n", .{});
+    std.debug.print("Options:\n", .{});
+    std.debug.print("  <input.md> <output.html>  Convert file to file\n", .{});
+    std.debug.print("  --stdio, -                Read from stdin, write to stdout\n", .{});
+}
+
+pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+
+    // Parse command line arguments
+    var args = try std.process.argsWithAllocator(allocator);
+    defer args.deinit();
+
+    _ = args.skip(); // skip program name
+
+    const first_arg = args.next() orelse {
+        printUsage();
+        return;
+    };
+
+    // Check for stdio mode
+    if (std.mem.eql(u8, first_arg, "--stdio") or std.mem.eql(u8, first_arg, "-")) {
+        try convertStdio(allocator);
+        return;
+    }
+
+    // File mode: first_arg is input path, need output path
+    const input_path = first_arg;
+    const output_path = args.next() orelse {
+        printUsage();
+        return;
+    };
+
+    try convertFile(input_path, output_path, allocator);
 }
